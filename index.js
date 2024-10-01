@@ -5,18 +5,38 @@ let vars = require('postcss-simple-vars')
 let sugarss = require('sugarss')
 let { globSync } = require('tinyglobby')
 
+const MAYBE_QUOTED_PATTERN = /^["']?((?<=["']).+(?=["'])|(?:.+))["']?$/
 let MIXINS_GLOB = '*.{js,cjs,mjs,json,css,sss,pcss}'
 
+function parseMixin(rule) {
+  let { name, paramString } =
+    rule.params.match(
+      /^(?<name>[a-zA-Z_-]+).?(?<paramString>(?:(?<=\().+(?=\))|(?<=\s).+))?.?$/
+    )?.groups ?? []
+
+  if (!name) {
+    throw rule.error(`Invalid mixin definition: ${rule.toString()}`)
+  }
+
+  paramString = paramString?.trim() ?? ''
+
+  return { name, paramString }
+}
+
+const unwrap = str => str.match(MAYBE_QUOTED_PATTERN)?.[1] ?? str
+
 function addMixin(helpers, mixins, rule, file) {
-  let name = rule.params.split(/\s/, 1)[0]
-  let other = rule.params.slice(name.length).trim()
+  let { name, paramString } = parseMixin(rule)
 
   let args = []
-  if (other.length) {
-    args = helpers.list.comma(other).map(str => {
+  if (paramString.length) {
+    args = helpers.list.comma(paramString).map(str => {
       let arg = str.split(':', 1)[0]
-      let defaults = str.slice(arg.length + 1)
-      return [arg.slice(1).trim(), defaults.trim()]
+      let defaults = str.slice(arg.length + 1).trim()
+      arg = arg.slice(1).trim()
+      defaults = unwrap(defaults)
+
+      return [arg, defaults]
     })
   }
 
@@ -64,7 +84,7 @@ function loadGlobalMixin(helpers, globs) {
       } else {
         root = helpers.parse(content, { from: path })
       }
-      root.walkAtRules('define-mixin', atrule => {
+      root.walkAtRules('mixin', atrule => {
         addMixin(helpers, mixins, atrule, path)
       })
     } else {
@@ -156,20 +176,13 @@ function resolveSingleArgumentValue(value, parentNode) {
 }
 
 function insertMixin(helpers, mixins, rule, opts) {
-  let name = rule.params.split(/\s/, 1)[0]
-  let rest = rule.params.slice(name.length).trim()
-
-  if (name.includes('(')) {
-    throw rule.error(
-      'Remove brackets from mixin. Like: @mixin name(1px) → @mixin name 1px'
-    )
-  }
+  let { name, paramString } = parseMixin(rule)
 
   let params
-  if (rest.trim() === '') {
+  if (paramString.trim() === '') {
     params = []
   } else {
-    params = helpers.list.comma(rest)
+    params = helpers.list.comma(paramString).map(unwrap)
   }
 
   let meta = mixins[name]
@@ -184,7 +197,7 @@ function insertMixin(helpers, mixins, rule, opts) {
     if (!opts.silent) {
       throw rule.error('Undefined mixin ' + name)
     }
-  } else if (mixin.name === 'define-mixin') {
+  } else if (mixin.name === 'mixin') {
     let i
     let values = {}
     for (i = 0; i < meta.args.length; i++) {
@@ -212,7 +225,7 @@ function insertMixin(helpers, mixins, rule, opts) {
   } else if (typeof mixin === 'function') {
     let args = [rule].concat(params)
     rule.walkAtRules(atRule => {
-      if (atRule.name === 'add-mixin' || atRule.name === 'mixin') {
+      if (atRule.name === 'include' || atRule.name === 'add-mixin') {
         insertMixin(helpers, mixins, atRule, opts)
       }
     })
@@ -255,12 +268,12 @@ module.exports = (opts = {}) => {
           'add-mixin': (node, helpers) => {
             insertMixin(helpers, mixins, node, opts)
           },
-          'define-mixin': (node, helpers) => {
-            addMixin(helpers, mixins, node)
-            node.remove()
+          'include': (node, helpers) => {
+            insertMixin(helpers, mixins, node, opts)
           },
           'mixin': (node, helpers) => {
-            insertMixin(helpers, mixins, node, opts)
+            addMixin(helpers, mixins, node)
+            node.remove()
           }
         },
         Once(root, helpers) {

@@ -1,6 +1,6 @@
 {
   "name": "postcss-mixins",
-  "version": "11.0.2",
+  "version": "12.0.0",
   "description": "PostCSS plugin for mixins",
   "keywords": [
     "postcss",
@@ -15,7 +15,10 @@
     "test:lint": "eslint .",
     "test": "pnpm run /^test:/"
   },
-  "author": "Andrey Sitnik <andrey@sitnik.ru>",
+  "author": "Aaron Pridy <aaron@alteredpixels.io>",
+  "contributors": [
+    "Andrey Sitnik"
+  ],
   "license": "MIT",
   "repository": "postcss/postcss-mixins",
   "engines": {
@@ -65,5 +68,10 @@
   },
   "clean-publish": {
     "cleanDocs": true
+  },
+  "wallaby": {
+    "autoDetect": [
+      "node:test"
+    ]
   }
 }

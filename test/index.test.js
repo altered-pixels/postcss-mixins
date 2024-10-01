@@ -22,23 +22,19 @@ async function catchError(fn) {
   return error
 }
 
-test('throws error on unknown mixin', async () => {
-  let error = await catchError(() => run('@mixin A'))
-  equal(error.message, 'postcss-mixins: <css input>:1:1: Undefined mixin A')
+test('throws error on missing mixin name', async () => {
+  let error = await catchError(() => run('@mixin '))
+  equal(error.message, 'postcss-mixins: <css input>:1:1: Invalid mixin definition: @mixin ')
 })
 
-test('throws error on brackets in mixin', async () => {
-  let error = await catchError(() => run('@define-mixin a $p {}; @mixin a($p)'))
-  equal(
-    error.message,
-    'postcss-mixins: <css input>:1:24: Remove brackets from mixin. ' +
-      'Like: @mixin name(1px) → @mixin name 1px'
-  )
+test('throws error on unknown mixin', async () => {
+  let error = await catchError(() => run('@include A'))
+  equal(error.message, 'postcss-mixins: <css input>:1:1: Undefined mixin A')
 })
 
 test('does not throw error on brackets in at-rules inside function mixins', async () => {
   await run(
-    '@mixin a { @supports (max(0px)) { color: black; } }',
+    '@include a { @supports (max(0px)) { color: black; } }',
     '.a { @supports (max(0px)) { color: black; } }',
     {
       mixins: {
@@ -51,11 +47,11 @@ test('does not throw error on brackets in at-rules inside function mixins', asyn
 })
 
 test('cans remove unknown mixin on request', async () => {
-  await run('@mixin A; a{}', 'a{}', { silent: true })
+  await run('@include A; a{}', 'a{}', { silent: true })
 })
 
 test('supports functions mixins', async () => {
-  await run('a { @mixin color black; }', 'a { color: black; }', {
+  await run('a { @include color black; }', 'a { color: black; }', {
     mixins: {
       color(rule, color) {
         rule.replaceWith({ prop: 'color', value: color })
@@ -65,7 +61,7 @@ test('supports functions mixins', async () => {
 })
 
 test('removes mixin at-rule', async () => {
-  await run('a { @mixin none; }', 'a { }', {
+  await run('a { @include none; }', 'a { }', {
     mixins: {
       none() {}
     }
@@ -73,7 +69,7 @@ test('removes mixin at-rule', async () => {
 })
 
 test('converts object from function to nodes', async () => {
-  await run('a { @mixin color black; }', 'a { color: black; }', {
+  await run('a { @include color black; }', 'a { color: black; }', {
     mixins: {
       color(rule, color) {
         return { color }
@@ -83,7 +79,7 @@ test('converts object from function to nodes', async () => {
 })
 
 test('passes undefined on missed parameters', async () => {
-  await run('a { @mixin test; @mixin test  ; }', 'a { }', {
+  await run('a { @include test; @include test  ; }', 'a { }', {
     mixins: {
       test(rule, param1) {
         equal(typeof param1, 'undefined')
@@ -95,7 +91,7 @@ test('passes undefined on missed parameters', async () => {
 
 test('supports object mixins', async () => {
   await run(
-    '@mixin obj;',
+    '@include obj;',
     '@media screen {\n    b {\n        one: 1\n    }\n}',
     {
       mixins: {
@@ -113,7 +109,7 @@ test('supports object mixins', async () => {
 
 test('supports nested function mixins', async () => {
   await run(
-    'a { color: black; @mixin parent { @mixin child; } }',
+    'a { color: black; @include parent { @include child; } }',
     'a { color: black; .parent { color: white } }',
     {
       mixins: {
@@ -134,7 +130,7 @@ test('supports nested function mixins', async () => {
 
 test('throws on unknown mixin type', async () => {
   let error = await catchError(() =>
-    run('@mixin a', '', {
+    run('@include a', '', {
       mixins: {
         a: 1
       }
@@ -145,57 +141,57 @@ test('throws on unknown mixin type', async () => {
 
 test('supports CSS mixins', async () => {
   await run(
-    '@define-mixin black { color: black; } a { @mixin black; }',
+    '@mixin black { color: black; } a { @include black; }',
     'a { color: black; }'
   )
 })
 
 test('uses variable', async () => {
   await run(
-    '@define-mixin color $color { color: $color $other; } ' +
-      'a { @mixin color black; }',
+    '@mixin color $color { color: $color $other; } ' +
+      'a { @include color black; }',
     'a { color: black $other; }'
   )
 })
 
 test('supports default value', async () => {
   await run(
-    '@define-mixin c $color: black { color: $color; } a { @mixin c; }',
+    '@mixin c $color: black { color: $color; } a { @include c; }',
     'a { color: black; }'
   )
 })
 
 test('supports mixins with content', async () => {
   await run(
-    '@define-mixin m { @media { @mixin-content; } } @mixin m { a {} }',
+    '@mixin m { @media { @mixin-content; } } @include m { a {} }',
     '@media { a {} }'
   )
 })
 
 test('supports mixins with declarations content', async () => {
   await run(
-    '@define-mixin m { a: 1; @mixin-content; } .m { @mixin m { b: 2 } }',
+    '@mixin m { a: 1; @mixin-content; } .m { @include m { b: 2 } }',
     '.m { a: 1; b: 2 }'
   )
 })
 
 test('supports mixins with empty content', async () => {
   await run(
-    '@define-mixin m { a: 1; @mixin-content; } .m { @mixin m; }',
+    '@mixin m { a: 1; @mixin-content; } .m { @include m; }',
     '.m { a: 1; }'
   )
 })
 
 test('supports mixins with multiple content', async () => {
   await run(
-    '@define-mixin m { @mixin-content; @mixin-content; } ' +
-      '.m { @mixin m { a: 1 } }',
+    '@mixin m { @mixin-content; @mixin-content; } ' +
+      '.m { @include m { a: 1 } }',
     '.m { a: 1; a: 1 }'
   )
 })
 
 test('supports object mixins with content', async () => {
-  await run('@mixin obj { b {} }', 'a { b {}\n}', {
+  await run('@include obj { b {} }', 'a { b {}\n}', {
     mixins: {
       obj: {
         a: {
@@ -208,14 +204,14 @@ test('supports object mixins with content', async () => {
 
 test('uses variables', async () => {
   await run(
-    '@define-mixin m $a, $b: b, $c: c { v: $a $b $c; } @mixin m 1, 2;',
+    '@mixin m $a, $b: b, $c: c { v: $a $b $c; } @include m 1, 2;',
     'v: 1 2 c;'
   )
 })
 
 test('loads mixins from dir', async () => {
   let result = await run(
-    'a { @mixin a 1; @mixin b; @mixin c; @mixin d; @mixin e; }',
+    'a { @include a 1; @include b; @include c; @include d; @include e; }',
     'a { a: 1; b: 2; c: 3; d: 4; e: 5; }',
     {
       mixinsDir: join(__dirname, 'mixins')
@@ -262,7 +258,7 @@ test('loads mixins from dir', async () => {
 test('loads mixins from dir with parent options', async () => {
   let parent = join(__dirname, 'a.js')
   let result = await run(
-    'a { @mixin a 1; @mixin b; @mixin c; @mixin d; @mixin e; }',
+    'a { @include a 1; @include b; @include c; @include d; @include e; }',
     'a { a: 1; b: 2; c: 3; d: 4; e: 5; }',
     {
       mixinsDir: join(__dirname, 'mixins'),
@@ -308,14 +304,14 @@ test('loads mixins from dir with parent options', async () => {
 })
 
 test('loads mixins from dirs', async () => {
-  await run('a { @mixin a 1; @mixin c; }', 'a { a: 1; c: 3; }', {
+  await run('a { @include a 1; @include c; }', 'a { a: 1; c: 3; }', {
     mixinsDir: [join(__dirname, 'mixins'), join(__dirname, 'other')]
   })
 })
 
 test('loads mixins from relative dir', async () => {
   await run(
-    'a { @mixin a 1; @mixin b; @mixin c; @mixin d; @mixin e; }',
+    'a { @include a 1; @include b; @include c; @include d; @include e; }',
     'a { a: 1; b: 2; c: 3; d: 4; e: 5; }',
     {
       mixinsDir: 'test/mixins/'
@@ -324,19 +320,19 @@ test('loads mixins from relative dir', async () => {
 })
 
 test('loads mixins from relative dirs', async () => {
-  await run('a { @mixin a 1; @mixin c; }', 'a { a: 1; c: 3; }', {
+  await run('a { @include a 1; @include c; }', 'a { a: 1; c: 3; }', {
     mixinsDir: ['test/mixins', 'test/other']
   })
 })
 
 test('loads mixins from file glob', async () => {
-  await run('a { @mixin a 1; @mixin b; }', 'a { a: 1; b: 2; }', {
+  await run('a { @include a 1; @include b; }', 'a { a: 1; b: 2; }', {
     mixinsFiles: join(__dirname, 'mixins', '*.{js,json}')
   })
 })
 
 test('loads mixins from file globs', async () => {
-  await run('a { @mixin a 1; @mixin c; }', 'a { a: 1; c: 3; }', {
+  await run('a { @include a 1; @include c; }', 'a { a: 1; c: 3; }', {
     mixinsFiles: [
       join(__dirname, 'mixins', '*.!(json|css)'),
       join(__dirname, 'other', '*')
@@ -345,7 +341,7 @@ test('loads mixins from file globs', async () => {
 })
 
 test('loads mixins with dependencies', async () => {
-  let result = await run('a { @mixin f; }', 'a { g: 5; }', {
+  let result = await run('a { @include f; }', 'a { g: 5; }', {
     mixinsFiles: join(__dirname, 'deps', 'f.js')
   })
   deepStrictEqual(
@@ -375,33 +371,35 @@ test('coverts mixins values', async () => {
       }
     })
   )
-  let result = await processor.process('a{ @mixin empty; }', { from: 'a.css' })
+  let result = await processor.process('a{ @include empty; }', {
+    from: 'a.css'
+  })
   equal(typeof result.root.first.first.value, 'string')
 })
 
 test('supports nested mixins', async () => {
   await run(
-    '@define-mixin a $a { a: $a; } ' +
-      '@define-mixin b $b { @mixin a $b; } ' +
-      '@mixin b 1;',
+    '@mixin a $a { a: $a; } ' +
+      '@mixin b $b { @include a $b; } ' +
+      '@include b 1;',
     'a: 1;'
   )
 })
 
 test('supports nested mixins in mixin-content', async () => {
   await run(
-    '@define-mixin a { a: 1 } ' +
-      '@define-mixin b { b { @mixin-content } } ' +
-      '@mixin b { @mixin a }',
+    '@mixin a { a: 1 } ' +
+      '@mixin b { b { @mixin-content } } ' +
+      '@include b { @include a }',
     'b { a: 1}'
   )
 })
 
 test('supports nested mixins on object mixins', async () => {
-  await run('@define-mixin a { a: a; } @mixin b;', 'a: a;', {
+  await run('@mixin a { a: a; } @include b;', 'a: a;', {
     mixins: {
       b: {
-        '@mixin a': {}
+        '@include a': {}
       }
     }
   })
@@ -409,111 +407,110 @@ test('supports nested mixins on object mixins', async () => {
 
 test('supports default arguments in nested mixins', async () => {
   await run(
-    '@define-mixin a $a: 1 { a: $a } ' +
-      '@define-mixin b $b { @mixin a $b } ' +
-      '@mixin b;',
+    '@mixin a $a: 1 { a: $a } ' +
+      '@mixin b $b { @include a $b } ' +
+      '@include b;',
     'a: 1;'
   )
 })
 
 test('works in sync mode on no option', () => {
-  let input = '@define-mixin a { a: 1 }; @mixin a'
+  let input = '@mixin a { a: 1 }; @include a'
   let out = 'a: 1'
   equal(postcss(mixins()).process(input, { from: 'a.css' }).css, out)
 })
 
 test('has @add-mixin alias', async () => {
-  await run('@define-mixin a { a: 1 } @add-mixin a', 'a: 1')
+  await run('@mixin a { a: 1 } @add-mixin a', 'a: 1')
 })
 
 test('treats single-arg content as a single argument', async () => {
   await run(
-    '@define-mixin a $x, $y { a: $x; b: $y; } ' +
-      '@mixin a single-arg(1, 2), 3;',
+    '@mixin a $x, $y { a: $x; b: $y; } ' + '@include a single-arg(1, 2), 3;',
     'a: 1, 2;\nb: 3;'
   )
 })
 
 test('throws error when single-arg does not have start parenthesis', async () => {
   let error = await catchError(() =>
-    run('@define-mixin a $p {}; @mixin a single-arg 1, 2);')
+    run('@mixin a $p {}; @include a single-arg 1, 2);')
   )
 
   equal(
     error.message,
-    'postcss-mixins: <css input>:1:24: ' +
+    'postcss-mixins: <css input>:1:17: ' +
       'Content of single-arg must be wrapped in brackets: single-arg 1'
   )
 })
 
 test('throws error when single-arg does not have end parenthesis', async () => {
   let error = await catchError(() =>
-    run('@define-mixin a $p {}; @mixin a single-arg(1, 2;')
+    run('@mixin a $p {}; @include a single-arg(1, 2;')
   )
 
   equal(
     error.message,
-    'postcss-mixins: <css input>:1:24: ' +
+    'postcss-mixins: <css input>:1:17: ' +
       'Content of single-arg must be wrapped in brackets: single-arg(1, 2;'
   )
 })
 
 test('ignores whitespaces outside of single-arg parentheses', async () => {
   await run(
-    '@define-mixin a $x, $y { a: $x; b: $y; } ' +
-      '@mixin a single-arg   (1, 2)   , 3;',
+    '@mixin a $x, $y { a: $x; b: $y; } ' +
+      '@include a single-arg   (1, 2)   , 3;',
     'a: 1, 2;\nb: 3;'
   )
 })
 
 test('can replace multiple single-arg contents', async () => {
   await run(
-    '@define-mixin a $x, $y { a: $x; b: $y; } ' +
-      '@mixin a single-arg(1, 2), single-arg(3, 4);',
+    '@mixin a $x, $y { a: $x; b: $y; } ' +
+      '@include a single-arg(1, 2), single-arg(3, 4);',
     'a: 1, 2;\nb: 3, 4;'
   )
 })
 
 test('can replace multiple single-arg contents inside single declaration', async () => {
   await run(
-    '@define-mixin a $x, $y { a: $x, $y; } ' +
-      '@mixin a single-arg(1, 2), single-arg(3, 4);',
+    '@mixin a $x, $y { a: $x, $y; } ' +
+      '@include a single-arg(1, 2), single-arg(3, 4);',
     'a: 1, 2, 3, 4;'
   )
 })
 
 test('can replace single-arg contents with nested parentheses', async () => {
   await run(
-    '@define-mixin a $x { a: $x } ' + '@mixin a single-arg(1, (2), 3);',
+    '@mixin a $x { a: $x } ' + '@include a single-arg(1, (2), 3);',
     'a: 1, (2), 3;'
   )
 })
 
 test('handles single-arg inside rules', async () => {
   await run(
-    '@define-mixin a $x, $y { .s { a: $x; b: $y; } } ' +
-      '@mixin a single-arg(1, 2), 3;',
+    '@mixin a $x, $y { .s { a: $x; b: $y; } } ' +
+      '@include a single-arg(1, 2), 3;',
     '.s { a: 1, 2; b: 3; }'
   )
 })
 
 test('passes single-arg to the nested mixin', async () => {
   await run(
-    '@define-mixin a $p { a: $p; } ' +
-      '@define-mixin b $x, $y { @mixin a $x; b: $y; } ' +
-      '@mixin b single-arg(1, 2), 3;',
+    '@mixin a $p { a: $p; } ' +
+      '@mixin b $x, $y { @include a $x; b: $y; } ' +
+      '@include b single-arg(1, 2), 3;',
     'a: 1, 2;\nb: 3;'
   )
 })
 
 test('passes single-arg to the nested function mixin', async () => {
-  await run('@mixin b single-arg(1, 2), 3;', 'a: 1, 2;\nb: 3;', {
+  await run('@include b single-arg(1, 2), 3;', 'a: 1, 2;\nb: 3;', {
     mixins: {
       a(rule, p) {
         return { a: p }
       },
       b(rule, x, y) {
-        return { ['@mixin a ' + x]: {}, b: y }
+        return { ['@include a ' + x]: {}, b: y }
       }
     }
   })

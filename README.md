@@ -10,7 +10,7 @@ Note, that you must set this plugin before [postcss-simple-vars]
 and [postcss-nested].
 
 ```css
-@define-mixin icon $network, $color: blue {
+@mixin icon $network, $color: blue {
     .icon.is-$(network) {
         color: $color;
         @mixin-content;
@@ -21,10 +21,10 @@ and [postcss-nested].
     }
 }
 
-@mixin icon twitter {
+@include icon twitter {
     background: url(twt.png);
 }
-@mixin icon youtube, red {
+@include icon youtube, red {
     background: url(youtube.png);
 }
 ```
@@ -99,7 +99,7 @@ See [postcss-simple-vars] docs for arguments syntax.
 You can use it with [postcss-nested] plugin:
 
 ```css
-@define-mixin icon $name {
+@mixin icon $name {
     padding-left: 16px;
     &::after {
         content: "";
@@ -108,7 +108,7 @@ You can use it with [postcss-nested] plugin:
 }
 
 .search {
-    @mixin icon search;
+    @include icon search;
 }
 ```
 
@@ -130,7 +130,7 @@ Also, you should use function mixin if you need to change property names
 in mixin, because [postcss-simple-vars] doesn’t support variables
 in properties yet.
 
-First argument will be `@mixin` node, that called this mixin.
+First argument will be `@include` node, that called this mixin.
 You can insert your declarations or rule before or after this node.
 Other arguments will be taken from at-rule parameters.
 
@@ -155,7 +155,7 @@ require('postcss-mixins')({
 ```
 
 ```css
-@mixin icons signin;
+@include icons signin;
 ```
 
 ```css
@@ -218,11 +218,11 @@ require('postcss-mixins')({
 
 ### Mixin Content
 
-`@mixin-content` at-rule will be replaced with mixin `@mixin` children.
+`@mixin-content` at-rule will be replaced with mixin `@include` children.
 For example, CSS mixins:
 
 ```SCSS
-@define-mixin isIE {
+@mixin isIE {
     .isIE & {
         @mixin-content;
     }
@@ -247,7 +247,7 @@ could be used like this:
 .foo {
     color: blue;
 
-    @mixin isIE {
+    @include isIE {
         color: red;
     }
 }
@@ -263,13 +263,13 @@ In order to pass a comma-separated value as an argument to a mixin, you can use
 the special `single-arg` keyword. For example:
 
 ```css
-@define-mixin transition $properties, $duration {
+@mixin transition $properties, $duration {
   transition-property: $properties;
   transition-duration: $duration;
 }
 
 .foo {
-  @mixin transition single-arg(color, background-color), 0.5s;
+  @include transition single-arg(color, background-color), 0.5s;
 }
 ```
 
@@ -277,17 +277,17 @@ the special `single-arg` keyword. For example:
 
 If you need to use Sass and PostCSS mixins together
 (for example, while migration), you could use `@add-mixin`,
-instead of `@mixin`. Just put PostCSS after Sass.
+instead of `@include`. Just put PostCSS after Sass.
 
 ```sass
 // Legacy SCSS
-@mixin old {
+@include old {
     …
 }
 @include old;
 
 // New code
-@define-mixin new {
+@mixin new {
     …
 }
 @add-mixin new;
@@ -333,14 +333,14 @@ module.exports = {
 
 // mixins/size.pcss
 
-@define-mixin size $size {
+@mixin size $size {
     width: $size;
     height: $size;
 }
 
 // mixins/circle.sss
 
-@define-mixin circle $size
+@mixin circle $size
   border-radius: 50%
   width: $size
   height: $size

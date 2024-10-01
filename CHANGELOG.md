@@ -1,6 +1,14 @@
 # Change Log
 This project adheres to [Semantic Versioning](http://semver.org/).
 
+## 12.0.0
+* Change mixin keywords.
+  Use: `@include` instead of `@mixin`.
+  Use: `@mixin` instead of `@define-mixin`.
+* Change mixin argument argument syntax to use brackets (original syntax still supported).
+  Use: `@include name(1, 2)` instead of `@include name 1, 2`.
+* Add support for quote-wrapped argument values (e.g. `@include foo('bar')`)
+
 ## 11.0.2
 * Fixed glob pattern performance (by @SuperchupuDev).
 
